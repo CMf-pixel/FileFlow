@@ -4,7 +4,7 @@ A local Windows file automation tool. FileFlow v0.1 is being built around one sa
 
 ## Current status
 
-Milestone 1 provides a rule model, structural validation, extension normalization and matching. Milestone 2 adds local JSON rule persistence in Core and isolated filesystem tests. The WPF application still opens an empty starter window. Preview, execution, and the rule editor are not implemented yet. Undo is outside v0.1.
+Milestone 1 provides a rule model, structural validation, extension normalization and matching. Milestone 2 adds local JSON rule persistence. Milestone 3 adds synchronous, read-only preview in Core with isolated filesystem tests. The WPF application still opens an empty starter window. Execution and the rule editor are not implemented yet. Undo is outside v0.1.
 
 ## Build and test
 
@@ -28,7 +28,7 @@ dotnet run --project src/FileFlow.App/FileFlow.App.csproj
 
 Extensions are supplied as separate entries. `png`, `.png`, and `.PNG` normalize to `.png`; duplicates are removed. Empty entries, wildcards, path separators, and compound extensions are rejected. `ExtensionMatcher.Matches` consumes a validated rule and checks the final filename extension, case-insensitively, against any listed extension. For example, `.gz` matches `archive.tar.gz`.
 
-Validation and matching do not access the filesystem. They use Windows path semantics even though the core has no WPF dependency. Structural validation rejects UNC and device paths, but does not establish that a drive is local, a directory exists, or an operation is permitted. Existence, mapped network drives, unsupported links/junctions, conflicts, and execution-time changes will be checked in later milestones before any operation is allowed.
+Validation and matching do not access the filesystem. They use Windows path semantics even though the core has no WPF dependency. Structural validation rejects UNC and device paths, but does not establish that a drive is local, a directory exists, or an operation is permitted. Preview checks existence, mapped network drives, unsupported links/junctions, and conflicts. Execution-time revalidation remains a future milestone.
 
 ## Rule persistence (Milestone 2)
 
@@ -66,6 +66,48 @@ Run the Milestone 2 tests with:
 
 ```powershell
 dotnet test tests/FileFlow.Core.Tests/FileFlow.Core.Tests.csproj --filter FullyQualifiedName~FileRuleStoreTests
+dotnet test FileFlow.sln
+dotnet build FileFlow.sln --configuration Release
+```
+
+## Read-only preview (Milestone 3)
+
+Pass a rule to `FileFlow.Core.Preview.FileRulePreviewer.CreatePreview(FileRule)`. This synchronous API does not load or save rules, execute operations, create directories, open write streams, or perform write probes. A future UI can invoke it off the UI thread; Core has no background-service architecture.
+
+```csharp
+var preview = new FileRulePreviewer().CreatePreview(rule);
+foreach (var operation in preview.Operations)
+{
+    Console.WriteLine($"{operation.Action}: {operation.SourcePath} -> {operation.DestinationPath}");
+}
+foreach (var issue in preview.Issues)
+{
+    Console.WriteLine($"{issue.Code}: {issue.Path ?? issue.PropertyName}: {issue.Message}");
+}
+Console.WriteLine(preview.Status); // NoMatches explicitly means zero files matched.
+```
+
+`OperationPreview` contains an immutable normalized rule snapshot, read-only ordered operations, and typed blocking issues. A structurally invalid rule returns validation issues with a null normalized rule. Each `PlannedOperation` preserves the original filename and records full source/destination paths, Copy/Move action, source byte length, and last-write time in UTC. Operations are ordered by ordinal case-insensitive filename, then ordinal filename to break ties.
+
+Status precedence is explicit:
+
+1. `Incomplete`: any required scan or inspection failed, even if conflicts were also found. Known operations remain available for diagnosis; the list may be partial.
+2. `Blocked`: the completed evaluation found blocking issues, including confirmed validation/preflight rejection.
+3. `NoMatches`: the completed evaluation found no issues and zero operations.
+4. `Ready`: the completed evaluation found operations and no issues.
+
+`CanExecute` describes preview eligibility only: it is true exclusively for `Ready` with operations and no issues. There is no execution API. All issues block the entire batch; a conflict is never overwritten, renamed, or skipped automatically. Resolve the issue and generate a fresh preview.
+
+Preview enumerates immediate source entries only, matches ordinary files using the existing extension matcher, and ignores ordinary subdirectories without opening them. Missing source/destination folders, equivalent normalized directory paths, existing destination entries, and duplicate case-insensitive destination names block the batch. Missing destinations are never created. Access errors, vanished source entries, metadata failures, and interrupted enumeration are reported instead of silently omitted.
+
+UNC/device paths and mapped network drives are unsupported. Attribute checks reject reparse points in source/destination directory components (root first) and all encountered direct source entries, including nonmatching entries. This deliberately conservative rule also rejects junctions, symbolic links, and other reparse entries such as some cloud placeholders. Preview does not follow links, parse reparse tags, use FSCTL calls, or traverse source subdirectories.
+
+Preview is an observation, not an atomic filesystem snapshot. Paths, metadata, permissions, and destination contents may change during or after inspection. It does not reserve names, test write permissions, or provide execution-time guarantees; future execution must independently revalidate. Link and network failure paths are covered with an internal inspection-only test adapter. Real filesystem safety tests use unique OS temporary directories and compare directory inventories and file bytes before and after preview.
+
+Run preview tests and verification with:
+
+```powershell
+dotnet test tests/FileFlow.Core.Tests/FileFlow.Core.Tests.csproj --filter FullyQualifiedName~Preview
 dotnet test FileFlow.sln
 dotnet build FileFlow.sln --configuration Release
 ```
