@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible problem in FileFlow
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please remove usernames, personal folder names, filenames, and other private data from anything you share.
+  - type: input
+    id: version
+    attributes:
+      label: FileFlow version
+      description: For example, 0.1.0.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Include the edition and version or build when known.
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use temporary sample folders where possible. Describe the rule and exact sequence of actions.
+      placeholder: |
+        1. Create a Copy rule for .txt files...
+        2. Choose Run...
+        3. Choose Execute...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include any error message shown by FileFlow.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or additional context
+      description: Optional. Attach only material you have checked for usernames, personal paths, filenames, and other private data.
+    validations:
+      required: false

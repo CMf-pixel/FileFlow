@@ -1,0 +1,59 @@
+name: Draft release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate tag and dated changelog
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+$') { throw 'Expected a vMAJOR.MINOR.PATCH tag.' }
+          $version = (dotnet msbuild src/FileFlow.App/FileFlow.App.csproj -nologo -getProperty:Version) -join "`n"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read application version.' }
+          $version = $version.Trim()
+          if ($env:RELEASE_TAG -cne "v$version") { throw 'Tag does not match application version.' }
+          $heading = '(?m)^## \[' + [regex]::Escape($version) + '\] - (\d{4}-\d{2}-\d{2})\r?$'
+          if ((Get-Content CHANGELOG.md -Raw) -notmatch $heading) { throw 'Date the changelog before creating the release tag.' }
+          [datetime]::ParseExact($Matches[1], 'yyyy-MM-dd', [cultureinfo]::InvariantCulture) | Out-Null
+      - name: Restore
+        run: dotnet restore FileFlow.sln
+      - name: Release tests
+        run: dotnet test FileFlow.sln --configuration Release --no-restore
+      - name: Release build
+        run: dotnet build FileFlow.sln --configuration Release --no-restore
+      - name: Package portable Windows build
+        run: ./scripts/Publish-Portable.ps1
+      - name: Create unpublished draft with portable ZIP
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          # Include drafts: --draft alone does not guarantee uniqueness for an existing tag.
+          $existingTags = @(gh api --paginate "repos/$env:GH_REPO/releases?per_page=100" --jq '.[].tag_name')
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check existing releases; refusing to create a draft.' }
+          if ($env:RELEASE_TAG -cin $existingTags) { throw 'A release or draft already exists for this tag.' }
+          gh release create $env:RELEASE_TAG "artifacts/FileFlow-$env:RELEASE_TAG-win-x64.zip" `
+            --draft --verify-tag --title "FileFlow $env:RELEASE_TAG" --notes-file CHANGELOG.md
+          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed; inspect GitHub before retrying.' }
