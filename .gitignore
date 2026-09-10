@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Root-level manual smoke-test data
+/Source/
+/Destination/
+
 # User-specific files
 *.rsuser
 *.suo

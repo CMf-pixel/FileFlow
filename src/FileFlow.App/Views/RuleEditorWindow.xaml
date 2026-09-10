@@ -1,0 +1,86 @@
+<Window x:Class="FileFlow.App.Views.RuleEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rule" Width="620" Height="540" MinWidth="520" MinHeight="460"
+        ResizeMode="CanResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Style="{StaticResource {x:Type Window}}">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16">
+                <TextBlock Text="Rule details" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="Choose which files FileFlow should organize and where they should go."
+                           Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,16" />
+
+                <Label Content="_Name" Target="{Binding ElementName=NameBox}" Style="{StaticResource FieldLabelStyle}" />
+                <TextBox x:Name="NameBox" LostKeyboardFocus="Field_LostKeyboardFocus" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                         AutomationProperties.Name="Rule name" />
+                <ItemsControl ItemsSource="{Binding (Validation.Errors), ElementName=NameBox}" Margin="0,3,0,0">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding ErrorContent}" Foreground="{DynamicResource ErrorBrush}" /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Label Content="_Source folder" Target="{Binding ElementName=SourceBox}" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBox x:Name="SourceBox" LostKeyboardFocus="Field_LostKeyboardFocus" Text="{Binding SourceDirectory, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                             AutomationProperties.Name="Source folder" />
+                    <Button Grid.Column="1" Content="_Browse..." Command="{Binding BrowseSourceCommand}" Margin="8,0,0,0"
+                            AutomationProperties.Name="Browse for source folder" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding (Validation.Errors), ElementName=SourceBox}" Margin="0,3,0,0">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding ErrorContent}" Foreground="{DynamicResource ErrorBrush}" /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Files directly inside this folder only." Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" />
+                <TextBlock Text="Folder availability is checked when you run the rule." Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" />
+
+                <Label Content="_Extensions" Target="{Binding ElementName=ExtensionsBox}" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
+                <TextBox x:Name="ExtensionsBox" LostKeyboardFocus="Field_LostKeyboardFocus" Text="{Binding ExtensionsText, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                         AutomationProperties.Name="File extensions" />
+                <ItemsControl ItemsSource="{Binding (Validation.Errors), ElementName=ExtensionsBox}" Margin="0,3,0,0">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding ErrorContent}" Foreground="{DynamicResource ErrorBrush}" /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Comma-separated, for example: .png, jpg, .PNG" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" />
+                <TextBlock Margin="0,3,0,0">
+                    <Run Text="Normalized: " Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <Run Text="{Binding NormalizedExtensions, Mode=OneWay}" />
+                </TextBlock>
+
+                <Label Content="_Action" Target="{Binding ElementName=ActionBox}" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
+                <ComboBox x:Name="ActionBox" LostKeyboardFocus="Field_LostKeyboardFocus" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action, UpdateSourceTrigger=PropertyChanged}"
+                          AutomationProperties.Name="File action" HorizontalAlignment="Stretch" />
+
+                <Label Content="_Destination folder" Target="{Binding ElementName=DestinationBox}" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBox x:Name="DestinationBox" LostKeyboardFocus="Field_LostKeyboardFocus" Text="{Binding DestinationDirectory, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                             AutomationProperties.Name="Destination folder" />
+                    <Button Grid.Column="1" Content="B_rowse..." Command="{Binding BrowseDestinationCommand}" Margin="8,0,0,0"
+                            AutomationProperties.Name="Browse for destination folder" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding (Validation.Errors), ElementName=DestinationBox}" Margin="0,3,0,0">
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding ErrorContent}" Foreground="{DynamicResource ErrorBrush}" /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Padding="12" Margin="0,16,0,0">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource ErrorPanelStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorBrush}" />
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0" Padding="16,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="_Cancel" IsCancel="True" MinWidth="84" Margin="0,0,8,0" AutomationProperties.Name="Cancel rule editing" />
+                <Button x:Name="SaveButton" Content="_Save" Command="{Binding SaveCommand}" MinWidth="84"
+                        Style="{StaticResource PrimaryButtonStyle}" Click="SaveButton_Click" AutomationProperties.Name="Save rule" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
+

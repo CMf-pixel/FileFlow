@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#17191C" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#22252A" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#2C3036" />
+    <SolidColorBrush x:Key="BorderBrush" Color="#3B4048" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F2F3F5" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B2B7C0" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="#F1707B" />
+    <SolidColorBrush x:Key="ErrorSurfaceBrush" Color="#3A2227" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#E8B65B" />
+    <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#392F1F" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#72C596" />
+    <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#1D3429" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#60A5FA" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#101317" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#79B5FB" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#438EE8" />
+    <SolidColorBrush x:Key="FocusBrush" Color="#9CCBFF" />
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#6F747C" />
+    <SolidColorBrush x:Key="SelectionBrush" Color="#315E8D" />
+    <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+    <Thickness x:Key="ControlPadding">12,6</Thickness>
+    <Thickness x:Key="FieldPadding">7,5</Thickness>
+</ResourceDictionary>

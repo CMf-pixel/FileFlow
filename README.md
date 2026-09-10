@@ -4,7 +4,7 @@ A local Windows file automation tool. FileFlow v0.1 is being built around one sa
 
 ## Current status
 
-Milestone 1 provides a rule model, structural validation, extension normalization and matching. Milestone 2 adds local JSON rule persistence. Milestone 3 adds synchronous, read-only preview in Core with isolated filesystem tests. Milestone 4 adds controlled Core execution of an explicitly approved preview. The WPF application still opens an empty starter window; execution is not wired to UI and the rule editor is not implemented. Undo is outside v0.1.
+Milestone 1 provides a rule model, structural validation, extension normalization and matching. Milestone 2 adds local JSON rule persistence. Milestone 3 adds synchronous, read-only preview in Core with isolated filesystem tests. Milestone 4 adds controlled Core execution of an explicitly approved preview. Milestone 5 connects these APIs to a compact dark WPF workflow: saved rules, create/edit/delete, read-only Preview, explicit Execute, busy feedback, and ordered results. Undo and release packaging remain outside this milestone.
 
 ## Build and test
 
@@ -20,7 +20,7 @@ dotnet run --project src/FileFlow.App/FileFlow.App.csproj
 
 - `src/FileFlow.App`: WPF application, referencing the core library.
 - `src/FileFlow.Core`: ordinary .NET library with no WPF or external package dependencies.
-- `tests/FileFlow.Core.Tests`: xUnit tests of the core behavior.
+- `tests/FileFlow.Core.Tests`: Windows-targeted xUnit tests of Core and App presentation behavior. Core itself remains on `net8.0`; App and tests target `net8.0-windows`.
 
 ## Rule validation and matching
 
@@ -34,7 +34,7 @@ Validation and matching do not access the filesystem. They use Windows path sema
 
 `FileFlow.Core.Persistence.FileRuleStore` defaults to `%LOCALAPPDATA%\FileFlow\rules.json`. Pass an explicit storage directory to its constructor for isolated storage. All persistence tests use unique OS temporary directories; they never use the default store location.
 
-`Load()` and `Save(IReadOnlyList<FileRule>)` return `RuleStoreResult`. Check `IsSuccess` before using `Rules`. Success contains the loaded or saved snapshot, including an empty collection on first launch. Failure contains a `RulePersistenceError` with `InvalidData`, `UnsupportedSchemaVersion`, or `IoError`, a descriptive message, and null rules. Callers must display/handle the error; a failed load must not be treated as an empty rule set. The starter WPF app is not wired to storage yet.
+`Load()` and `Save(IReadOnlyList<FileRule>)` return `RuleStoreResult`. Check `IsSuccess` before using `Rules`. Success contains the loaded or saved snapshot, including an empty collection on first launch. Failure contains a `RulePersistenceError` with `InvalidData`, `UnsupportedSchemaVersion`, or `IoError`, a descriptive message, and null rules. Callers must display/handle the error; a failed load must not be treated as an empty rule set. The WPF app displays load failures as an error state with Retry and blocks rule edits until loading succeeds. It publishes create/edit/delete changes only after storage succeeds.
 
 The UTF-8 JSON format is:
 
@@ -72,7 +72,7 @@ dotnet build FileFlow.sln --configuration Release
 
 ## Read-only preview (Milestone 3)
 
-Pass a rule to `FileFlow.Core.Preview.FileRulePreviewer.CreatePreview(FileRule)`. This synchronous API does not load or save rules, execute operations, create directories, open write streams, or perform write probes. A future UI can invoke it off the UI thread; Core has no background-service architecture.
+Pass a rule to `FileFlow.Core.Preview.FileRulePreviewer.CreatePreview(FileRule)`. This synchronous API does not load or save rules, execute operations, create directories, open write streams, or perform write probes. The WPF application invokes it off the UI thread; Core has no background-service architecture.
 
 ```csharp
 var preview = new FileRulePreviewer().CreatePreview(rule);
@@ -124,7 +124,7 @@ static ExecutionResult ExecuteApprovedPreview(OperationPreview approvedPreview)
 }
 ```
 
-Use the `FileFlow.Core.Preview` and `FileFlow.Core.Execution` namespaces. Milestone 5 may call this API away from the UI thread; this milestone adds no UI, scheduling, or background service.
+Use the `FileFlow.Core.Preview` and `FileFlow.Core.Execution` namespaces. Milestone 5 calls this API away from the UI thread. Core remains synchronous and has no scheduling or background service.
 
 Each preview object permits one attempt per process, including rejected attempts. A shared `ConditionalWeakTable` and atomic flag prevent reuse through another executor instance or concurrent submission. Preview data stays immutable; the guard adds no persistence, sessions, messaging, or lifecycle service. After any attempt, generate a fresh preview and obtain approval again. `CanExecute` remains preview eligibility only. Null input and unexpected programming errors throw; an unexpected error does not release a claimed preview.
 
@@ -159,4 +159,39 @@ dotnet build FileFlow.sln --configuration Release
 git diff --check
 ```
 
-Operation history persistence, Undo, rollback, watchers, recursive scanning, transactions, locking infrastructure, and Milestone 5 UI remain excluded. No new projects or third-party packages are required.
+Operation history persistence, Undo, rollback, watchers, recursive scanning, transactions, locking infrastructure, remain excluded from Core execution. No new projects or third-party packages are required.
+
+
+## Desktop workflow (Milestone 5)
+
+Launch FileFlow to see your saved rules. Create a rule with a name, source folder, comma-separated extensions such as `.png, jpg`, a Copy or Move action, and a destination folder. Copy is the default. Both folder fields support manual paths and the native Windows folder picker. Core normalizes valid extensions and paths. A fresh Create dialog hides validation errors until a field is edited or left; Save stays disabled until Core reports the rule structurally valid. Once valid, the editor shows any newly introduced errors, including related-field errors. A direct invalid save attempt reveals all errors without persisting.
+
+A rule can be saved while a folder is unavailable. Folder existence, accessibility and supported-path checks happen when you choose Run. Only files directly inside the source folder are considered; rules never watch folders or run automatically.
+
+Run prepares a preview without changing files. Ready previews show every planned source/destination pair and require an explicit Execute action. Blocked, Incomplete and NoMatches previews cannot execute. Incomplete lists are diagnostic and may be partial. Closing an idle preview changes nothing.
+
+Preview generation and execution run away from the WPF dispatcher. Execution displays an indeterminate busy indicator because Core returns a complete result without progress callbacks. Closing is blocked while work is active. There is no cancellation of Copy/Move.
+
+Results distinguish Succeeded, Failed and NotAttempted in preview order. Failures may leave filesystem changes, and completed operations are not rolled back. A preflight rejection starts no file operations. After any attempt, close the results and Run again to generate a fresh preview; the previous Execute action cannot be reused. There is no Undo.
+
+Deleting a rule requires confirmation and affects only the saved definition. It never deletes, moves, restores, or otherwise changes your files. If saving fails, the previous saved list and editor draft remain available. Corrupt or unsupported storage is preserved and never replaced with an empty rule set. FileFlow has no automatic recovery UI.
+
+Only one FileFlow instance may run for a Windows user, including across sessions. A second launch displays an explanation and exits. Different Windows users have independent mutex names. No IPC or command forwarding is used.
+
+App uses small constructor-injected view models and service interfaces. Window/dialog APIs stay in views, startup and the WPF dialog adapter. Shared background/surface/text resources allow later appearance changes without changing workflow architecture; Mica/Acrylic and Settings are not implemented.
+
+FileFlow's WPF windows use native dark captions on Windows 11, with standard system captions on older Windows or in high-contrast mode. Owned application dialogs center on their owner. The compact initial and minimum window sizes are recorded in the verification notes.
+
+### Milestone 5 verification
+
+```powershell
+dotnet test FileFlow.sln --configuration Release
+dotnet build FileFlow.sln --configuration Release
+git diff --check
+```
+
+Presentation tests cover startup, persistence failures, normalization, create/edit/delete, duplicate activation, all preview statuses, exact preview identity, one-attempt behavior, ordered results, unexpected failures, background scheduling and mutex contention/recovery. Real integration tests create unique OS temporary folders for persistence, Copy/Move, cancellation and stale-preview rejection. No automated test uses the default user rules store.
+
+Interactive smoke checklist (use temporary/sample folders for file mutations): first launch; create/edit/delete and restart; Copy and Move; no matches and conflicts; stale previews and partial failures; long paths; keyboard focus and Escape/Enter; resizing; high DPI; large-list scrolling; closing while busy; second-instance behavior. Validation records distinguish automated/offscreen checks from interactive checks still requiring a Windows desktop session.
+
+See [Milestone 5 verification](docs/milestone-5-verification.md) for executed automated/offscreen checks and the remaining interactive smoke checklist.

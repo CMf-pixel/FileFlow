@@ -1,12 +1,134 @@
-﻿<Window x:Class="FileFlow.App.MainWindow"
+<Window x:Class="FileFlow.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:FileFlow.App"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        mc:Ignorable="d" Title="FileFlow" Width="900" Height="620"
+        MinWidth="680" MinHeight="460" WindowStartupLocation="CenterScreen" Style="{StaticResource {x:Type Window}}"
+        Loaded="Window_Loaded" Closing="Window_Closing">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="FileFlow" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="Automate files with a preview before anything changes." Style="{StaticResource SecondaryTextStyle}" Margin="0,2,0,0" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="_Create rule" Command="{Binding CreateCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Center" AutomationProperties.Name="Create rule" />
+        </Grid>
+
+        <Border Grid.Row="1" Padding="12" Margin="0,0,0,12">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource ErrorPanelStyle}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                        <DataTrigger Binding="{Binding HasLoadError}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorBrush}" />
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding HasRules}" Value="True" />
+                                    <Condition Binding="{Binding IsLoaded}" Value="True" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                <TextBlock Text="Rules" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <ListBox Grid.Row="1" ItemsSource="{Binding Rules}" AutomationProperties.Name="File organization rules"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource PanelBorderStyle}" Padding="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.2*" MinWidth="90" />
+                                        <ColumnDefinition Width="2.2*" MinWidth="180" />
+                                        <ColumnDefinition Width="1.2*" MinWidth="100" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Rule.Name}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                        <TextBox Text="{Binding Rule.SourceDirectory, Mode=OneWay}" IsReadOnly="True" ToolTip="Source folder"
+                                                 AutomationProperties.Name="Source folder path" />
+                                        <DockPanel Margin="0,4,0,0">
+                                            <TextBlock Text="→" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBox Text="{Binding Rule.DestinationDirectory, Mode=OneWay}" IsReadOnly="True" ToolTip="Destination folder"
+                                                     AutomationProperties.Name="Destination folder path" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="{Binding Extensions}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Extensions}" />
+                                        <TextBlock Text="{Binding Rule.Action}" Style="{StaticResource SecondaryTextStyle}" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="_Run" Command="{Binding DataContext.RunCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" AutomationProperties.Name="{Binding Rule.Name, StringFormat=Run rule {0}}" Margin="0,0,4,0" />
+                                        <Button Content="_Edit" Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" AutomationProperties.Name="{Binding Rule.Name, StringFormat=Edit rule {0}}" Margin="0,0,4,0" />
+                                        <Button Content="⋯" Padding="9,6" ToolTip="More actions" AutomationProperties.Name="{Binding Rule.Name, StringFormat=More actions for rule {0}}"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" Click="MoreActionsButton_Click">
+                                            <Button.ContextMenu>
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Header="_Delete" AutomationProperties.Name="{Binding Rule.Name, StringFormat=Delete rule {0}}"
+                                                              Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="No rules yet" Style="{StaticResource SectionTitleStyle}" HorizontalAlignment="Center" />
+                <TextBlock Text="Create a rule to organize files with a preview before FileFlow changes anything."
+                           Style="{StaticResource SecondaryTextStyle}" TextAlignment="Center" Margin="0,8,0,16" />
+                <Button Content="_Create" Command="{Binding CreateCommand}" Style="{StaticResource PrimaryButtonStyle}"
+                        HorizontalAlignment="Center" AutomationProperties.Name="Create first rule" />
+            </StackPanel>
+
+            <Border Style="{StaticResource ErrorPanelStyle}" Padding="16" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding HasLoadError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Rules could not be loaded" Style="{StaticResource SectionTitleStyle}" Foreground="{DynamicResource ErrorBrush}" />
+                    <TextBlock Text="{Binding ErrorMessage}" Margin="0,8,0,16" />
+                    <Button Content="_Retry" Command="{Binding RetryCommand}" HorizontalAlignment="Left" AutomationProperties.Name="Retry loading rules" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource WindowBackgroundBrush}" Opacity="0.96"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="260">
+                    <TextBlock Text="Preparing preview..." FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <ProgressBar IsIndeterminate="True" Margin="0,12,0,0" AutomationProperties.Name="Preparing preview" />
+                    <TextBlock Text="Please wait before closing FileFlow." Style="{StaticResource SecondaryTextStyle}"
+                               HorizontalAlignment="Center" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

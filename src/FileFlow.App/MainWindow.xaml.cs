@@ -1,23 +1,38 @@
-﻿using System.Text;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using FileFlow.App.ViewModels;
 
 namespace FileFlow.App;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    private readonly MainWindowViewModel viewModel;
+    private bool initialized;
+
+    public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
+        this.viewModel = viewModel;
+        DataContext = viewModel;
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (initialized) return;
+        initialized = true;
+        viewModel.Initialize();
+    }
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (!viewModel.CanClose) e.Cancel = true;
+    }
+
+    private void MoreActionsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { ContextMenu: { } menu } button) return;
+        menu.PlacementTarget = button;
+        menu.IsOpen = true;
     }
 }

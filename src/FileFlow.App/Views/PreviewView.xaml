@@ -1,0 +1,100 @@
+<UserControl x:Class="FileFlow.App.Views.PreviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:preview="clr-namespace:FileFlow.Core.Preview;assembly=FileFlow.Core"
+             Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Padding="12" Margin="0,0,0,8">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource PanelBorderStyle}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Preview.Status}" Value="{x:Static preview:PreviewStatus.Blocked}">
+                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Preview.Status}" Value="{x:Static preview:PreviewStatus.Incomplete}">
+                            <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+                            <Setter Property="BorderThickness" Value="2" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding PreviewTitle}" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="{Binding PreviewSummary}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,12,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding Preview.Status}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding Preview.Operations.Count, StringFormat={}{0} operations}" Style="{StaticResource SecondaryTextStyle}"
+                               HorizontalAlignment="Right" Margin="0,3,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,4,8">
+            <TextBlock Text="Action: " Style="{StaticResource SecondaryTextStyle}" />
+            <TextBlock Text="{Binding Preview.Rule.Action, Mode=OneWay}" FontWeight="SemiBold" />
+        </StackPanel>
+
+        <ListBox Grid.Row="2" ItemsSource="{Binding Preview.Issues}" MaxHeight="150" Margin="0,0,0,8"
+                 AutomationProperties.Name="Preview diagnostics" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.Style>
+                <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                    <Style.Triggers><DataTrigger Binding="{Binding Preview.Issues.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                </Style>
+            </ListBox.Style>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource ErrorPanelStyle}" Padding="10" MinWidth="660">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Message, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" />
+                            <TextBox Text="{Binding Path, Mode=OneWay}" IsReadOnly="True" Margin="0,4,0,0" AutomationProperties.Name="Diagnostic path">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding Path}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                            <TextBlock Text="{Binding PropertyName, Mode=OneWay, StringFormat=Field: {0}}" Margin="0,3,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryTextStyle}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding PropertyName}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ListBox Grid.Row="3" ItemsSource="{Binding Preview.Operations}" AutomationProperties.Name="Planned file operations"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource PanelBorderStyle}" Padding="10" MinWidth="660">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="70" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Action}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1">
+                                <TextBox Text="{Binding SourcePath, Mode=OneWay}" IsReadOnly="True" ToolTip="Source" AutomationProperties.Name="Source path" />
+                                <TextBlock Text="↓" Style="{StaticResource SecondaryTextStyle}" Margin="0,2,0,2" />
+                                <TextBox Text="{Binding DestinationPath, Mode=OneWay}" IsReadOnly="True" ToolTip="Destination" AutomationProperties.Name="Destination path" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>
