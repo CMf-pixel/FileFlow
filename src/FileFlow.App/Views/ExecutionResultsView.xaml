@@ -1,0 +1,110 @@
+<UserControl x:Class="FileFlow.App.Views.ExecutionResultsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:execution="clr-namespace:FileFlow.Core.Execution;assembly=FileFlow.Core"
+             Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border Padding="12" Margin="0,0,0,8">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource PanelBorderStyle}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Result.Outcome}" Value="{x:Static execution:ExecutionOutcome.Succeeded}">
+                            <Setter Property="Background" Value="{DynamicResource SuccessSurfaceBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsPartialFailure}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="{Binding Summary}" Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="4,0,4,8">
+            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="Succeeded" Style="{StaticResource SecondaryTextStyle}" /><TextBlock Text="{Binding Result.SucceededCount}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" /></StackPanel>
+            <StackPanel Grid.Column="1"><TextBlock Text="Failed" Style="{StaticResource SecondaryTextStyle}" /><TextBlock Text="{Binding Result.FailedCount}" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" /></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="Not attempted" Style="{StaticResource SecondaryTextStyle}" /><TextBlock Text="{Binding Result.NotAttemptedCount}" FontWeight="SemiBold" /></StackPanel>
+        </Grid>
+
+        <ListBox Grid.Row="2" ItemsSource="{Binding Result.Errors}" MaxHeight="120" Margin="0,0,0,8"
+                 AutomationProperties.Name="Execution diagnostics" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.Style>
+                <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                    <Style.Triggers><DataTrigger Binding="{Binding Result.Errors.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                </Style>
+            </ListBox.Style>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource ErrorPanelStyle}" Padding="10" MinWidth="660">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Message, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" />
+                            <TextBox Text="{Binding Path, Mode=OneWay}" IsReadOnly="True" Margin="0,4,0,0" AutomationProperties.Name="Execution error path">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding Path}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ListBox Grid.Row="3" ItemsSource="{Binding Result.Operations}" AutomationProperties.Name="Execution operation results"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource PanelBorderStyle}" Padding="10" MinWidth="660">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="104" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Top" FontWeight="SemiBold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Not attempted" />
+                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static execution:OperationStatus.Succeeded}">
+                                                <Setter Property="Text" Value="Succeeded" /><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static execution:OperationStatus.Failed}">
+                                                <Setter Property="Text" Value="Failed" /><Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <StackPanel Grid.Column="1">
+                                <TextBox Text="{Binding Operation.SourcePath, Mode=OneWay}" IsReadOnly="True" ToolTip="Source" AutomationProperties.Name="Source path" />
+                                <TextBlock Margin="0,2,0,2"><Run Text="{Binding Operation.Action}" /><Run Text=" →" /></TextBlock>
+                                <TextBox Text="{Binding Operation.DestinationPath, Mode=OneWay}" IsReadOnly="True" ToolTip="Destination" AutomationProperties.Name="Destination path" />
+                                <TextBlock Margin="0,5,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{Binding Error.Message, Mode=OneWay}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                                            <Style.Triggers><DataTrigger Binding="{Binding Error}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>
