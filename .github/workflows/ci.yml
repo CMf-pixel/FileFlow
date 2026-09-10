@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore FileFlow.sln
+      - name: Release tests
+        run: dotnet test FileFlow.sln --configuration Release --no-restore
+      - name: Release build
+        run: dotnet build FileFlow.sln --configuration Release --no-restore
