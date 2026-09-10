@@ -2,7 +2,7 @@
 
 All notable changes to FileFlow are documented in this file.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-09-10
 
 - Added a Windows desktop workflow for creating, editing, deleting, previewing, and explicitly executing saved Move or Copy rules.
 - Added case-insensitive direct-file extension matching and immediate-folder scanning.
